@@ -1,60 +1,80 @@
 #!/usr/bin/env python3
-import os, numpy as np, argparse, subprocess
+import argparse, subprocess, re, time
 
-def findIfGridAgent(traindir):
-  if 'BlockAgents' in traindir: return False
-  return True
-def findActFreq(traindir):
-  if 'act02' in traindir: return 2
-  if 'act04' in traindir: return 4
-  if 'act08' in traindir: return 8
-  if 'act16' in traindir: return 16
-  assert False
-  return 0
-def findBlockSize(traindir):
-  if '2blocks' in traindir: return 16
-  if '4blocks' in traindir: return 8
-  if '8blocks' in traindir: return 4
-  assert False
-  return 0
-def findBlockNum(traindir):
-  if '2blocks' in traindir: return 2
-  if '4blocks' in traindir: return 4
-  if '8blocks' in traindir: return 8
-  assert False
-  return 0
+def getRunArguments(traindir):
+  with open(traindir+'/runArguments00.sh', 'r') as f:
+    data = f.read()
+  print(data)
+  return data
 
-lastCompiledBlocksize = -1
+def findArgument(data, argumentName):
+  return re.search('-{} '.format(argumentName)+r'(\w+)', data).group(1)
+
+def findIfGridAgent(data):
+  gridAgent = findArgument(data, 'RL_gridPointAgents')
+  assert gridAgent in ['0', '1']
+  return gridAgent
+
+def findActFreq(data):
+  actFreq = findArgument(data, 'RL_freqActions')
+  assert actFreq in ['2', '4', '8', '16']
+  return actFreq
+
+def findBlockNum(data):
+  blockNum = findArgument(data, 'bpdx')
+  assert blockNum in ['2', '4', '8']
+  return blockNum
+
+def findPolicyKernel(data):
+  blockNum = findArgument(data, 'RL_policyKernel')
+  assert blockNum in ['0', '1']
+  return blockNum
+
+def clean(dirn):
+  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/*.dat')
+  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/*.raw')
+  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/invCovLogE_RE*')
+  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/scalars_RE*')
+  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/spectrumLogE_RE*')
+  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/stdevLogE_RE*')
+  path = '/u/caldana/smarties/runs/'+dirn+'/simulation_000_00000'
+  for ext in ['h5', 'xmf', 'status']:
+    subprocess.run('find {} -name "*.{}" -type f -delete'.format(path, ext))
+  return
 
 def launch(dirn, args, lastCompiledBlocksize):
-  path, bGridAgents = args.restartsPath, args.bGridAgents
-  BPD, BSIZE = findBlockNum(dirn), findBlockSize(dirn)
-  useGridSizeFac = args.useGridSize // (BPD * BSIZE)
-  print("using factor", useGridSizeFac)
+  path = args.restartsPath +'/' + dirn
+  data = getRunArguments(path)
+  bGridAgents = int(findIfGridAgent(data))
+  assert bGridAgents == 0
+  BPD  = int(findBlockNum(data))
+  BSIZE = 32 // BPD
+  assert BPD * BSIZE == 32
   cmd = ''
   cmd = cmd + ' export LES_RL_N_TSIM=100    \n '
-  cmd = cmd + ' export LES_RL_FREQ_A=%d     \n ' % findActFreq(dirn)
+  cmd = cmd + ' export LES_RL_FREQ_A=%s     \n ' % findActFreq(data)
   cmd = cmd + ' export LES_RL_BLOCKSIZE=%d  \n ' % BSIZE
-  cmd = cmd + ' export LES_RL_NBLOCK=%d     \n ' % (useGridSizeFac * BPD)
-  if lastCompiledBlocksize == BSIZE:
-        cmd = cmd + ' export SKIPMAKE=true  \n '
-  else: cmd = cmd + ' export SKIPMAKE=false \n '
-  lastCompiledBlocksize = BSIZE
-  if bGridAgents: cmd = cmd + ' export LES_RL_GRIDACT=1 \n '
-  else:           cmd = cmd + ' export LES_RL_GRIDACT=0 \n '
+  cmd = cmd + ' export LES_RL_NBLOCK=%d     \n ' % BPD
+  cmd = cmd + ' export SKIPMAKE=%s \n ' % str(lastCompiledBlocksize == BSIZE).lower()
+  cmd = cmd + ' export LES_RL_GRIDACT=%d \n ' % bGridAgents
   cmd = cmd + ' export LES_RL_NETTYPE=FFNN \n '
   cmd = cmd + ' export LES_RL_GRIDACTSETTINGS=0 \n '
-  common = ' smarties.py MARL_LES --nEvalEpisodes 2 --clockHours 1 --nTaskPerNode 2 -n 1'
+  cmd = cmd + ' export LES_RL_POLICY_KERNEL=%s \n ' % findPolicyKernel(data)
+  common = ' smarties.py MARL_LES --nEvalEpisodes 2 --clockHours 1'\
+           ' --nThreads {} {} '.format(args.nThreads, '--hpc {}'.format(args.hpc) if args.hpc else '')
   res = [60, 65, 70, 76, 82, 88, 95, 103, 111, 120, 130, 140, 151, 163, 176, 190, 205]
   for i, re in enumerate(res):
     cmdre = cmd + ' export LES_RL_EVALUATE=RE%03d \n ' % re
-    runn = '%s_%03dPD_RE%03d' % (dirn, args.useGridSize, re)
-    #runn = '%s_RE%03d' % (dirn, re)
-    runcmd = '%s %s -r %s --restart %s' % (cmdre, common, runn, path+'/'+dirn)
-    #print(runcmd)
+    runn = '%s_%03dPD_RE%03d' % (dirn, 32, re)
+    runcmd = '%s %s -r %s --restart %s' % (cmdre, common, runn, path)
+    print(runcmd)
     subprocess.run(runcmd, shell=True)
-    if i == 0: cmd = cmd + ' export SKIPMAKE=true \n '
-  return lastCompiledBlocksize
+    if args.hpc:
+      time.sleep(60*8)
+      clean()
+    if i == 0: 
+      cmd = cmd + ' export SKIPMAKE=true \n '
+  return BSIZE
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(
@@ -63,14 +83,12 @@ if __name__ == '__main__':
                       help="Directories containing trained policy to evaluate")
   parser.add_argument('--restartsPath', default='../../runs/',
                       help="Optional path to trained dirs, if not default")
-  parser.add_argument('--useGridSize', type=int, default=32,
-                      help="Number of cubismup3d blocks to use.")
-  parser.add_argument('--bGridAgents', dest='bGridAgents', action='store_true',
-    help="Force one agent per grid point.")
-  parser.set_defaults(bGridAgents=False)
+  parser.add_argument('--hpc', default="", help="HPC name")
+  parser.add_argument('--nThreads', type=int, default=1)
   args = parser.parse_args()
 
+  lastCompiledBlocksize = -1
   for dirn in args.restarts:
-    #print(dirn, args.restartsPath, args.useBlockNumber, args.bGridAgents)
     lastCompiledBlocksize = launch(dirn, args, lastCompiledBlocksize)
+
 

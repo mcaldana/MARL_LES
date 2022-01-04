@@ -5,6 +5,8 @@ LES_RL_N_TSIM=${LES_RL_N_TSIM:-20}
 LES_RL_NBLOCK=${LES_RL_NBLOCK:-4}
 LES_RL_GRIDACT=${LES_RL_GRIDACT:-0}
 LES_RL_GRIDACTSETTINGS=${LES_RL_GRIDACTSETTINGS:-${LES_RL_GRIDACT}}
+LES_RL_POLICY_KERNEL=${LES_RL_POLICY_KERNEL:-0}
+
 
 LES_RL_EVALUATE=${LES_RL_EVALUATE:-0}
 if [ ${LES_RL_EVALUATE} == 0 ] ; then
@@ -52,7 +54,8 @@ cat <<EOF >${RUNDIR}/runArguments00.sh
 -nprocsx 1 -nprocsy 1 -nprocsz 1 \
 -analysis HIT -tAnalysis 100 -nu 0.005 -energyInjectionRate 0.2 \
 -RL_freqActions ${LES_RL_FREQ_A} -RL_nIntTperSim ${LES_RL_N_TSIM} \
--RL_gridPointAgents ${LES_RL_GRIDACT} -initCondFileTokens ${LES_RL_EVALUATE}
+-RL_gridPointAgents ${LES_RL_GRIDACT} -initCondFileTokens ${LES_RL_EVALUATE} \
+-RL_policyKernel ${LES_RL_POLICY_KERNEL}
 EOF
 
 #copy target files
@@ -74,3 +77,4 @@ fi
 
 export MPI_RANKS_PER_ENV=1
 export EXTRA_LINE_ARGS=" --appSettings runArguments00.sh --nStepPappSett 0 "
+
