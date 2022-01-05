@@ -26,20 +26,26 @@ def findBlockNum(data):
   return blockNum
 
 def findPolicyKernel(data):
-  blockNum = findArgument(data, 'RL_policyKernel')
-  assert blockNum in ['0', '1']
-  return blockNum
+  try:
+    blockNum = findArgument(data, 'RL_policyKernel')
+    assert blockNum in ['0', '1']
+    return blockNum
+  except Exception as e:
+    print('Exception "{}" occurred while scanning for "RL_policyKernel", defaulting to 0'.format(e))
+    return '0'
 
 def clean(dirn):
-  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/*.dat')
-  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/*.raw')
-  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/invCovLogE_RE*')
-  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/scalars_RE*')
-  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/spectrumLogE_RE*')
-  subprocess.run('rm -rf /u/caldana/smarties/runs/'+dirn+'/stdevLogE_RE*')
+  subprocess.run('rm /u/caldana/smarties/runs/'+dirn+'/exec', shell=True)
+  subprocess.run('rm /u/caldana/smarties/runs/'+dirn+'/*.dat', shell=True)
+  subprocess.run('rm /u/caldana/smarties/runs/'+dirn+'/*.raw', shell=True)
+  subprocess.run('rm /u/caldana/smarties/runs/'+dirn+'/invCovLogE_RE*', shell=True)
+  subprocess.run('rm /u/caldana/smarties/runs/'+dirn+'/scalars_RE*', shell=True)
+  subprocess.run('rm /u/caldana/smarties/runs/'+dirn+'/spectrumLogE_RE*', shell=True)
+  subprocess.run('rm /u/caldana/smarties/runs/'+dirn+'/stdevLogE_RE*', shell=True)
+  subprocess.run('rm /u/caldana/smarties/runs/'+dirn+'/simulation_000_00000/*.raw', shell=True)
   path = '/u/caldana/smarties/runs/'+dirn+'/simulation_000_00000'
   for ext in ['h5', 'xmf', 'status']:
-    subprocess.run('find {} -name "*.{}" -type f -delete'.format(path, ext))
+    subprocess.run('find {} -name "*.{}" -type f -delete'.format(path, ext), shell=True)
   return
 
 def launch(dirn, args, lastCompiledBlocksize):
@@ -71,7 +77,7 @@ def launch(dirn, args, lastCompiledBlocksize):
     subprocess.run(runcmd, shell=True)
     if args.hpc:
       time.sleep(60*8)
-      clean()
+      clean(runn)
     if i == 0: 
       cmd = cmd + ' export SKIPMAKE=true \n '
   return BSIZE

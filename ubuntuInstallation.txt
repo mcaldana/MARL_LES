@@ -1,0 +1,110 @@
+sudo apt update
+sudo apt install build-essential
+sudo apt-get -y install cmake
+sudo apt install git
+
+-----------------------------------------------------
+
+
+git clone --recursive https://github.com/cselab/CubismUP_3D.git
+cd CubismUP_3D/
+sudo apt-get install python3-pip
+
+
+-----------------------------------------------------
+# smarties
+pip3 install pybind11 --user
+echo 'export SMARTIES_ROOT=/home/matteo/marl-les/smarties' >> ~/.bash_profile
+echo 'export PATH=${SMARTIES_ROOT}/bin:${PATH}' >> ~/.bash_profile
+echo 'export LD_LIBRARY_PATH=${SMARTIES_ROOT}/lib:${LD_LIBRARY_PATH}' >> ~/.bash_profile
+echo 'export PYTHONPATH=${PYTHONPATH}:${SMARTIES_ROOT}/lib' >>  ~/.bash_profile
+source ~/.bash_profile
+#./install_dependencies.sh --all
+
+apt install gfortran
+apt install mpich
+
+#./install_dependencies.sh --blas
+#cd ~
+#CC=${CC:-gcc}
+#CXX=${CXX:-g++}
+#PHYSICAL_CORE_COUNT=$([[ $(uname) = 'Darwin' ]] && sysctl -n hw.physicalcpu_max || lscpu -p | egrep -v '^#' | sort -u -t, -k 2,4 | wc -l)
+#JOBS=${JOBS:-$PHYSICAL_CORE_COUNT}
+#git clone https://github.com/xianyi/OpenBLAS
+#cd OpenBLAS
+#make CC=${CC} FC=${CC} NUM_THREADS=1 USE_THREAD=0 USE_OPENMP=0 -j${JOBS}
+#sudo make install
+
+sudo apt-get update
+sudo apt-get install -y libopenblas-dev
+
+cmake ..
+make -j
+
+----------------------------------------------------
+# Cubism
+python3 -m pip install --user -r requirements.txt
+./install_dependencies.sh --fftw 
+echo "export FFTW_ROOT=/home/matteo/marl-les/CubismUP_3D/dependencies/build/fftw-3.3.7/" >> ~/.bashrc
+#start 14:17
+export FFTW_LIBRARIES=/home/matteo/marl-les/CubismUP_3D/dependencies/build/fftw-3.3.7/lib/libfftw3.a
+
+apt get install libfftw3-3
+apt get install libfftw3-dev
+
+git clone 
+
+cmake -DBUILD_GPU=false -DBUILD_SHARED=false ..
+
+    cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PATH/accfft/ \
+          -DFFTW_ROOT="$FFTW_ROOT" \
+          -DBUILD_GPU=true \
+          -DBUILD_SHARED=false \
+          ..
+#./install_dependencies.sh --hdf5 
+sudo apt install libhdf5-mpich-dev
+sudo apt-get install libgsl-dev
+
+./install_dependencies.sh --export >> ~/.bashrc
+
+#MARL-LES
+echo 'export SMARTIES_ROOT=/home/matteo/marl-les/smarties' >> ~/.bash_profile
+echo 'export PATH=${SMARTIES_ROOT}/bin:${PATH}' >> ~/.bash_profile
+echo 'export LD_LIBRARY_PATH=${SMARTIES_ROOT}/lib:${LD_LIBRARY_PATH}' >> ~/.bash_profile
+echo 'export PYTHONPATH=${PYTHONPATH}:${SMARTIES_ROOT}/lib' >>  ~/.bash_profile
+source ~/.bash_profile
+
+PATH=$PATH:/home/matteo/marl-les/smarties/bin
+
+cd apps/cart_pole_cpp && make
+smarties.py cart_pole_cpp DQN.json -r test
+
+
+export CXX=mpic++
+
+#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/include/hdf5/mpich:/home/matteo/marl-les/CubismUP_3D/dependencies/build/fftw-3.3.7/include:/home/matteo/marl-les/CubismUP_3D/dependencies/fftw-3.3.7/mpi
+export CPATH=$CPATH:/usr/include/hdf5/mpich:/home/matteo/marl-les/CubismUP_3D/dependencies/build/fftw-3.3.7/include:/home/matteo/marl-les/CubismUP_3D/dependencies/fftw-3.3.7/mpi
+
+export HDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/mpich
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_ROOT/lib
+
+export FFTW_ROOT=/home/matteo/marl-les/CubismUP_3D/dependencies/build/fftw-3.3.7
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$FFTW_ROOT/lib
+
+sudo find / -name fftw3-mpi.h
+-----------------------------------------------------
+echo 'export SMARTIES_ROOT=/home/matteo/marl-les/smarties' >> ~/.bash_profile
+echo 'export PATH=${SMARTIES_ROOT}/bin:${PATH}' >> ~/.bash_profile
+echo 'export LD_LIBRARY_PATH=${SMARTIES_ROOT}/lib:${LD_LIBRARY_PATH}' >> ~/.bash_profile
+echo 'export PYTHONPATH=${PYTHONPATH}:${SMARTIES_ROOT}/lib' >>  ~/.bash_profile
+source ~/.bash_profile
+
+export CXX=mpic++
+
+export HDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/mpich
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_ROOT/lib
+
+export FFTW_ROOT=/home/matteo/marl-les/CubismUP_3D/dependencies/build/fftw-3.3.7
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$FFTW_ROOT/lib
+
+smarties.py MARL_LES -r test

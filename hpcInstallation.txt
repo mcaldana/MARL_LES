@@ -1,0 +1,270 @@
+export mkPrefix=/u/sw
+source $mkPrefix/etc/profile
+module load gcc-glibc/11
+
+# smarties
+git clone --recursive https://github.com/cselab/smarties.git
+cd smarties
+mkdir -p build
+cd build
+
+module load openblas
+cmake ..
+make -j
+
+# cubism
+git clone --recursive https://github.com/cselab/CubismUP_3D.git
+cd CubismUP_3D
+python3 -m pip install --user -r requirements.txt
+
+module load fftw
+module load hdf5
+module load gsl
+
+# accfft
+cd ..
+git clone https://github.com/novatig/accfft accfft
+cd accfft
+mkdir build && cd build
+export FFTWDIR=$mkFftwPrefix
+export FFTW_DIR=$mkFftwPrefix
+cmake -DBUILD_GPU=false -DBUILD_SHARED=false  ..
+make -j
+make install
+
+# cubism
+cd ~/CubismUP_3D
+mkdir -p build
+cd build
+#export FFTW_LIBRARIES=$mkFftwLib
+#export GSL_ROOT_DIR=$mkGslPrefix
+#
+#cmake ..-DFFTW_LIBRARY=$mkFftwLib
+#
+#echo "export FFTW_ROOT=$mkFftwPrefix" >> ~/.bashrc
+#export FFTW_LIBRARIES=$mkFftwLib/libfftw3.la
+#
+#module load gsl
+#export GSL_ROOT_DIR=$mkGslPrefix
+./install_dependencies.sh --fftw 
+./install_dependencies.sh --gsl 
+module load hdf5
+
+cd smarties/apps/
+git clone --recursive https://github.com/cselab/MARL_LES.git
+
+echo 'export SMARTIES_ROOT=/u/caldana/smarties' >> ~/.bash_profile
+echo 'export PATH=${SMARTIES_ROOT}/bin:${PATH}' >> ~/.bash_profile
+echo 'export LD_LIBRARY_PATH=${SMARTIES_ROOT}/lib:${LD_LIBRARY_PATH}' >> ~/.bash_profile
+echo 'export PYTHONPATH=${PYTHONPATH}:${SMARTIES_ROOT}/lib' >>  ~/.bash_profile
+
+export CPATH=$CPATH:/u/caldana/CubismUP_3D/dependencies/build/fftw-3.3.7/include
+
+export HDF5_ROOT=$mkHdf5Prefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_ROOT/lib
+
+export GSL_ROOT_DIR=/u/caldana/CubismUP_3D/dependencies/build/gsl-2.1
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GSL_ROOT_DIR/lib
+
+export FFTW_ROOT=/u/caldana/CubismUP_3D/dependencies/build/fftw-3.3.7
+export FFTW_ROOT_DIR=$FFTW_ROOT
+export FFTW_DIR=$FFTW_ROOT
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$FFTW_ROOT/lib
+
+python3 ./bin/smarties.py MARL_LES -r test
+
+export PYBIND11_ROOT=$mkPybind11Prefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PYBIND11_ROOT/lib
+
+
+make -C . bs=4 accfft=false -j rlHIT
+
+------------------------------------------------------------------------------------------------------------
+#smarties try 2
+module load gcc-glibc/7
+./smarties/install_dependencies.sh --mpich
+
+# exit , ssh
+# mpicxx --version #does not work
+
+export PATH=/u/caldana/smarties/extern/bin:$PATH
+export LD_LIBRARY_PATH=/u/caldana/smarties/extern/lib:$LD_LIBRARY_PATH
+
+# mpicxx --version #works
+# MUST BE FIRST IN PATH, if you load something it is overridden
+
+./smarties/install_dependencies.sh --blas
+
+
+
+
+#modify CMakeLists.txt line77: replace set(CMAKE_CXX_STANDARD 14)
+cmake .. -DMPI_C_COMPILER=/u/caldana/smarties/extern/bin/mpicc -DMPI_CXX_COMPILER=/u/caldana/smarties/extern/bin/mpicxx
+
+make -j
+
+cd ~/CubismUP_3D
+./install_dependencies.sh --fftw 
+./install_dependencies.sh --gsl 
+./install_dependencies.sh --hdf5 
+
+module load python
+
+export HDF5_ROOT=/u/caldana/CubismUP_3D/dependencies/build/hdf5-1.10.1-parallel
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_ROOT/lib
+
+export GSL_ROOT_DIR=/u/caldana/CubismUP_3D/dependencies/build/gsl-2.1
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GSL_ROOT_DIR/lib
+
+export FFTW_ROOT=/u/caldana/CubismUP_3D/dependencies/build/fftw-3.3.7
+export FFTW_ROOT_DIR=$FFTW_ROOT
+export FFTW_DIR=$FFTW_ROOT
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$FFTW_ROOT/lib
+
+
+#ERROR
+#/u/sw/pkgs/toolchains/gcc-glibc/7/prefix/lib/gcc/x86_64-mk-linux/7.1.0/../../../../x86_64-mk-linux/bin/ld: Simulation.o: undefined reference to symbol 'MPI_Cart_create'
+#/u/caldana/smarties/extern/lib/libmpi.so.12: error adding symbols: DSO missing from command line
+collect2: error: ld returned 1 exit status
+# add to CubismUP_3D/makefiles/Makefile -lmpi -lmpicxx
+
+===========================================================================================
+
+export SMARTIES_ROOT=/u/caldana/smarties/
+export PATH=${SMARTIES_ROOT}/bin:${PATH}
+export LD_LIBRARY_PATH=${SMARTIES_ROOT}/lib:${LD_LIBRARY_PATH}
+export PYTHONPATH=${PYTHONPATH}:${SMARTIES_ROOT}/lib
+
+export HDF5_ROOT=$mkHdf5Prefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_ROOT/lib
+
+export GSL_ROOT_DIR=$mkGslPrefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GSL_ROOT_DIR/lib
+
+#add to Makefile
+#SimulationData.o: ../source/SimulationData.cpp ../source/SimulationData.h
+
+-I '/usr/local/lib/python3.8/site-packages/pybind11/include'
+-I/u/caldana/.local/lib/python3.8/site-packages/pybind11/include
+
+/u/sw/toolchains/gcc-glibc/11/pkgs/pybind11/2.6.2/include/pybind11/pybind11.h
+/u/caldana/.local/include/python3.9/pybind11/pybind11.h
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$FFTW_ROOT/lib
+
+
+
+diff --git a/makefiles/Makefile b/makefiles/Makefile
+index 3870bab..025cc40 100644
+--- a/makefiles/Makefile
++++ b/makefiles/Makefile
+@@ -80,7 +80,7 @@ CPPFLAGS += -DCUP_NO_MACROS_HEADER
+ NVFLAGS  += -DCUP_NO_MACROS_HEADER
+ #CPPFLAGS += -lm
+ #CPPFLAGS += -I${HDF5_INCLUDE_OPTS}
+-CPPFLAGS += -I../Cubism/include/
++CPPFLAGS += -I../Cubism/include/ -I/u/sw/toolchains/gcc-glibc/11/pkgs/pybind11/2.6.2/include/ -I/u/sw/toolchains/gcc-glibc/11/base/include/python3.9/
+ #CPPFLAGS += -D_USE_FPZIP_  -I../tools/fpzip/inc
+ 
+ LDFLAGS = $(CPPFLAGS)
+@@ -90,6 +90,8 @@ BUILDDIR = .
+ SRC_DIR = $(sort $(dir $(wildcard $(BUILDDIR)/../source/*/)))
+ CUBISM_DIR = $(BUILDDIR)/../Cubism/src/
+ 
++SimulationData.o: ../source/SimulationData.cpp ../source/SimulationData.h
++
+ OBJECTS = ObstacleFactory.o Obstacle.o ObstacleVector.o Ellipsoid.o Cylinder.o \
+        Fish.o StefanFish.o CarlingFish.o Sphere.o Plate.o ExternalObstacle.o Naca.o \
+        FishLibrary.o BufferedLogger.o SimulationData.o Simulation.o PoissonSolver.o \
+@@ -207,7 +209,7 @@ DEPS := $(ALLOBJ:%.o=%.d)
+ .DEFAULT_GOAL := ../bin/simulation
+ 
+ ../bin/simulation: $(EXEOBJ) $(NVOBJECTS)
+-       mkdir -p ../bin
++       mkdir -p ../bin 
+        $(LD) $(EXEOBJ) $(NVOBJECTS) $(LDFLAGS) $(LIBS) -o $@
+ 
+ lib: $(LIBOBJ) $(NVOBJECTS)
+
+------------------------------------------------------------------------------------------------------
+
+export mkPrefix=/u/sw
+source $mkPrefix/etc/profile
+module load gcc-glibc/11
+git clone --recursive https://github.com/cselab/smarties.git
+git clone --recursive https://github.com/cselab/CubismUP_3D.git
+cd smarties/apps
+git clone --recursive https://github.com/cselab/MARL_LES.git
+
+module load openblas
+module load pybind11
+module load hdf5
+module load gsl
+
+mkdir build
+cd build
+cmake ..
+make -j
+
+export SMARTIES_ROOT=/u/caldana/smarties/
+export PATH=${SMARTIES_ROOT}/bin:${PATH}
+export LD_LIBRARY_PATH=${SMARTIES_ROOT}/lib:${LD_LIBRARY_PATH}
+export PYTHONPATH=${PYTHONPATH}:${SMARTIES_ROOT}/lib
+export HDF5_ROOT=$mkHdf5Prefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_ROOT/lib
+export GSL_ROOT_DIR=$mkGslPrefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GSL_ROOT_DIR/lib
+export PYTHON_ROOT=$mkPythonPrefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GSL_ROOT_DIR/lib
+
+#add to Makefile
+
+#-I../../smarties/source/extern/pybind11/include/
+#-I/u/sw/toolchains/gcc-glibc/11/base/include/python3.9/
+
+SimulationData.o: ../source/SimulationData.cpp ../source/SimulationData.h
+	$(CXX) $(CPPFLAGS) -MMD -MF $(patsubst %.o,%.d,$@) -c $< -o $@
+
+# add to source/bindings/Simulation.cpp
+#struct ompi_communicator_t{};
+
+./install_dependencies.sh --fftw 
+export FFTW_ROOT=/u/caldana/CubismUP_3D/dependencies/build/fftw-3.3.7
+export FFTW_ROOT_DIR=$FFTW_ROOT
+export FFTW_DIR=$FFTW_ROOT
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$FFTW_ROOT/lib
+
+pip3 install pybind11 --user
+-I/u/caldana/.local/lib/python3.9/site-packages/pybind11/
+
+cd ../../CubismUP_3D/makefiles/
+make -C . bs=4 accfft=false -j rlHIT
+
+----------------------------------------------------
+#remove bindings folder
+# add
+# SimulationData.o: ../source/SimulationData.cpp ../source/SimulationData.h
+#	$(CXX) $(CPPFLAGS) -MMD -MF $(patsubst %.o,%.d,$@) -c $< -o $@
+#Simulation.o: ../source/Simulation.cpp ../source/Simulation.h
+#	$(CXX) $(CPPFLAGS) -MMD -MF $(patsubst %.o,%.d,$@) -c $< -o $@
+
+///////////////////////////////////////////////////
+
+export mkPrefix=/u/sw
+source $mkPrefix/etc/profile
+module load gcc-glibc/11
+module load hdf5 gsl 
+export SMARTIES_ROOT=/u/caldana/smarties/
+export PATH=${SMARTIES_ROOT}/bin:${PATH}
+export LD_LIBRARY_PATH=${SMARTIES_ROOT}/lib:${LD_LIBRARY_PATH}
+export PYTHONPATH=${PYTHONPATH}:${SMARTIES_ROOT}/lib
+export HDF5_ROOT=$mkHdf5Prefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_ROOT/lib
+export GSL_ROOT_DIR=$mkGslPrefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GSL_ROOT_DIR/lib
+export PYTHON_ROOT=$mkPythonPrefix
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GSL_ROOT_DIR/lib
+export FFTW_ROOT=/u/caldana/CubismUP_3D/dependencies/build/fftw-3.3.7
+export FFTW_ROOT_DIR=$FFTW_ROOT
+export FFTW_DIR=$FFTW_ROOT
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$FFTW_ROOT/lib
